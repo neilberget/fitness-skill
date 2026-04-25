@@ -126,7 +126,7 @@ Output the workout in this shape (concise — no fluff):
 - ...
 
 ### Main work (~X min)
-- Exercise — sets × reps @ load/intensity, rest
+- [Exercise](https://www.youtube.com/results?search_query=Exercise+form) — sets × reps @ load/intensity, rest
 - ...
 
 ### Finisher / cooldown (~X min)
@@ -135,6 +135,10 @@ Output the workout in this shape (concise — no fluff):
 **Target HR zones:** [if cardio is involved]
 **Notes:** [form cues, alternatives if something feels off]
 ```
+
+**Exercise name links (default on):** By default, wrap every exercise name in a YouTube search link so the user can click through if they don't recognize the movement. Format: `[Exercise name](https://www.youtube.com/results?search_query=Exercise+name+form)` — URL-encode spaces as `+` and append `+form` to bias results toward demonstrations. Apply this in warm-up, main work, and finisher sections. Skip it for plain rest/recovery items (e.g. "rest 90s") and section labels.
+
+If the user asks to turn the links off ("stop linking exercises", "no YouTube links", etc.), record it in `profile.md` under `## Skill settings` as `youtube_links: off` and stop adding links in this and future sessions. If they later ask to turn it back on, set it to `on`. Always check the profile for this setting before generating a workout — default to on if missing.
 
 Then ask: "Want any modifications, or ready to go?"
 

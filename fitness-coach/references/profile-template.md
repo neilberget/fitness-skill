@@ -50,6 +50,9 @@ _Last updated: YYYY-MM-DD_
 - **Time realities:** ...
 - **Other:** ...
 
+## Skill settings
+- **youtube_links:** on  <!-- set to "off" if user asks to stop linking exercise names to YouTube searches -->
+
 ## Change log
 - YYYY-MM-DD — Profile created.
 ```
