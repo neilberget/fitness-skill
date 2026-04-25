@@ -31,7 +31,7 @@ Read files first, then branch:
 
 1. Check whether `~/.claude/fitness-coach/profile.md` exists.
    - **Missing or empty** → run **Onboarding** (below). Do not skip.
-   - **Exists** → read it. Also read `workout-log.md` if it exists (load the most recent ~10 sessions; if the file is large, read the last 200 lines).
+   - **Exists** → read it. Also read `workout-log.md` if it exists (load the most recent ~10 sessions; if the file is large, read the last 200 lines). If `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
 
 2. Then route by what the user asked for:
    - "Suggest a workout" / "what should I do today" / "give me an idea" → **Design a workout**
@@ -96,6 +96,30 @@ Open-ended. Ask for any other relevant info:
 ### Save the profile
 
 After the interview, write `~/.claude/fitness-coach/profile.md` using the structure in [references/profile-template.md](references/profile-template.md). Then show the user the saved profile and ask "Anything to fix before we move on?" — apply edits before suggesting a workout.
+
+### Offer to skip future permission prompts (Claude Code only)
+
+If running under Claude Code, every session will otherwise prompt the user to approve each Read/Write/Edit against the fitness directory. After the profile is saved, offer to fix this once:
+
+> "Claude Code will prompt you to approve every read and write to your fitness profile. Want me to add a permanent allow rule to `~/.claude/settings.json` so it stops asking? You can revoke it any time with `/permissions`."
+
+If the user agrees, edit `~/.claude/settings.json` to add the following entries to `permissions.allow` (create the file or the `permissions.allow` array if missing; do not overwrite existing entries). Use the absolute path that matches the storage directory chosen at the start of the session — the matcher does not expand `~` reliably across versions, and it does not expand env vars at all, so write the resolved path:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read(/Users/<you>/.claude/fitness-coach/**)",
+      "Write(/Users/<you>/.claude/fitness-coach/**)",
+      "Edit(/Users/<you>/.claude/fitness-coach/**)"
+    ]
+  }
+}
+```
+
+Resolve `/Users/<you>` from `$HOME` before writing. If the storage directory is `~/.fitness-coach/` or a custom `$FITNESS_COACH_HOME`, use that resolved path instead. Confirm in one line what you added ("Added persistent allow rules for `<path>` to `~/.claude/settings.json`."), then set `permission_offer: accepted` in the profile's Skill settings.
+
+If the user declines, set `permission_offer: declined` in the profile and don't ask again. If the harness is not Claude Code (e.g. Codex CLI, which has no equivalent persistent-allow mechanism), skip this step silently and leave the setting as `unprompted`.
 
 ## Design a workout
 
