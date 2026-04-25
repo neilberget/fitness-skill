@@ -9,6 +9,7 @@ A [Claude Code](https://claude.com/claude-code) skill that turns Claude into you
 - **Tailored workouts on demand.** Ask "give me a workout" any time and Claude designs a session that fits your goals, available time today, current equipment, recovery state, and what you've done recently.
 - **Modifications mid-conversation.** "Make it 30 minutes." "Swap out the deadlifts." "No jumping today." It adjusts.
 - **Workout log.** Report back how it went and Claude appends a structured entry to `~/.claude/fitness-coach/workout-log.md` (newest first). Future sessions read recent entries to inform programming.
+- **Weekly check-in.** After ~a week of training (7+ days, 3+ sessions), Claude offers a 5-minute retrospective interview — what worked, what to drop, goal progress, life context shifts — then updates your profile and logs the check-in to `check-ins.md`. The suggestion is always optional; if you just want today's workout, say so and it skips.
 - **Profile updates.** Tell it about a new injury, new equipment, or a goal change and it edits the profile in place.
 
 Every workout includes specific loads, rep schemes, time blocks, and BPM ranges — no "moderate weight, a few rounds" hand-waving.
@@ -117,7 +118,7 @@ If installed, Claude will recognize it has no profile yet and start the onboardi
 
 ## What gets saved on your machine
 
-The skill writes only two files to a single directory. Location is chosen in this order:
+The skill writes only a small set of files to a single directory. Location is chosen in this order:
 
 1. `$FITNESS_COACH_HOME` if set
 2. `~/.fitness-coach/` if it exists
@@ -127,6 +128,7 @@ Files:
 
 - `profile.md` — your bio, goals, equipment, preferences. Edited in place when facts change.
 - `workout-log.md` — append-only, newest first. One entry per session.
+- `check-ins.md` — append-only, newest first. One entry per weekly check-in (created on the first one).
 
 Both are plain markdown. You can edit them by hand any time. Nothing is sent anywhere except as part of your normal agent conversations.
 
@@ -136,6 +138,7 @@ The skill's behavior is defined in `fitness-coach/SKILL.md` and the files under 
 
 - `references/profile-template.md` — structure of the saved profile
 - `references/log-format.md` — structure of workout log entries
+- `references/check-in-format.md` — structure of weekly check-in entries
 - `references/programming-principles.md` — heuristics for designing sessions (goal→dose mapping, recovery rules, loading progression, time budgeting)
 
 Edit these to taste. If you change the programming principles, Claude's workout design changes accordingly.
@@ -148,6 +151,7 @@ fitness-coach/
 └── references/
     ├── profile-template.md     # Saved-profile structure
     ├── log-format.md           # Workout log entry format
+    ├── check-in-format.md      # Weekly check-in entry format
     └── programming-principles.md  # Workout design heuristics
 fitness-coach.skill             # Packaged distributable
 ```

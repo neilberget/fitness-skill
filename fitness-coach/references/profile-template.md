@@ -53,6 +53,7 @@ _Last updated: YYYY-MM-DD_
 ## Skill settings
 - **youtube_links:** on  <!-- set to "off" if user asks to stop linking exercise names to YouTube searches -->
 - **permission_offer:** unprompted  <!-- "accepted" once persistent allow rules are added, "declined" if user said no, "unprompted" otherwise -->
+- **last_check_in:** _none_  <!-- YYYY-MM-DD of last completed weekly check-in; "_none_" until the first one runs -->
 
 ## Change log
 - YYYY-MM-DD — Profile created.

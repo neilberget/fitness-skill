@@ -1,6 +1,6 @@
 ---
 name: fitness-coach
-description: Personal fitness coach that designs workouts tailored to the user's bio, goals, equipment, preferences, and recent training history. Use whenever the user asks for a workout, workout idea, exercise suggestion, training session, daily lift/cardio/mobility plan, modifications to a proposed workout, or wants to log/report what they did. Also use when the user asks to update their fitness profile, change their goals, add equipment, or report new injuries. On first use, this skill onboards the user by interviewing them and saving a structured profile; on subsequent uses, it loads the profile and recent workout log to inform suggestions.
+description: Personal fitness coach that designs workouts tailored to the user's bio, goals, equipment, preferences, and recent training history. Use whenever the user asks for a workout, workout idea, exercise suggestion, training session, daily lift/cardio/mobility plan, modifications to a proposed workout, or wants to log/report what they did. Also use when the user asks to update their fitness profile, change their goals, add equipment, report new injuries, or run a weekly check-in / training review. On first use, this skill onboards the user by interviewing them and saving a structured profile; on subsequent uses, it loads the profile and recent workout log to inform suggestions, and surfaces a weekly check-in when one is due.
 ---
 
 # Fitness Coach
@@ -21,6 +21,7 @@ Files in the storage directory:
 
 - `profile.md` — bio, goals, equipment, preferences. Long-lived. Edit in place when facts change.
 - `workout-log.md` — append-only reverse-chronological log of completed sessions (most recent at top).
+- `check-ins.md` — append-only reverse-chronological log of weekly retrospectives (most recent at top). Created on the first check-in, not at onboarding.
 
 ## Workflow decision tree
 
@@ -35,6 +36,7 @@ Always use the **absolute path** (`/Users/<you>/.claude/fitness-coach/...`, reso
 Once the profile is loaded:
 
 - If `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
+- Check whether a weekly check-in is due (see [Weekly check-in](#weekly-check-in)). If so, surface a one-line suggestion at the **start** of your response — don't block the user's actual request.
 
 **Then route by what the user asked for:**
 
@@ -42,6 +44,7 @@ Once the profile is loaded:
 - "Make it shorter" / "swap X" / "no jumping today" → **Modify the proposed workout**
 - "Here's how it went" / "I did X" / "log this" → **Log the session**
 - "Update my profile" / new injury / new equipment / goal change → **Update the profile**
+- "Let's check in" / "do the weekly review" / "yeah let's review" → **Weekly check-in**
 
 If the user's intent is ambiguous (e.g. "let's train"), default to Design a workout but confirm time available and any constraints today before locking the plan.
 
@@ -187,6 +190,63 @@ When the user reports back, append a new entry to the **top** of `workout-log.md
 If the file doesn't exist, create it with a top-of-file header `# Workout log` and add the entry below.
 
 After logging, briefly acknowledge ("Logged.") and either stop or — if the user signaled they want to keep going — propose what to do next.
+
+## Weekly check-in
+
+Roughly once a week, step back and interview the user for feedback so the program stays calibrated. This is a coach habit — don't skip it, but never let it get in the way of someone who just wants today's workout.
+
+### When to suggest it
+
+Compute "due" at the start of any session, after loading the profile and log:
+
+- **Days elapsed:** today minus `last_check_in` in `## Skill settings`. If the field is missing, treat the date of the first entry in `workout-log.md` as the baseline; if the log is also empty, not due.
+- **Sessions logged since last check-in:** count entries in `workout-log.md` newer than `last_check_in`.
+
+Due when **days ≥ 7 AND sessions ≥ 3**. Soft-overdue (worth a slightly stronger nudge) when days ≥ 10 or sessions ≥ 6. If the user just onboarded, don't surface this until they have at least 3 logged sessions.
+
+### How to surface it
+
+When due, lead your response with **one line** before doing what the user actually asked for. Examples:
+
+> "Quick note — it's been 8 days and 4 sessions since our last check-in. Want to do a 5-minute review after this, or save it for next time? (Just say so — happy to skip straight to today's workout.)"
+
+> "We're overdue for a check-in (12 days, 6 sessions). I can run through it now or after today's session — your call."
+
+Then proceed with their request. **Do not** start the interview unless they say yes. If they ignore the nudge or say "just give me the workout," carry on and don't re-mention it this session. Wait until next session to suggest again.
+
+If the user agrees to do it now, run the interview before designing today's workout. If they say "after the workout" or "after I log it," remember within this session and ask once more after they report the workout's done.
+
+### The interview
+
+Keep it short — aim for ~5 minutes of the user's time. Ask in 2–3 grouped rounds, one at a time, conversational. Do not dump the whole list.
+
+Read the recent ~10 log entries first so questions are grounded in what they actually did, not generic.
+
+**Round 1 — How the week landed.** Ask:
+- How did the last week of training feel overall? (energy, motivation, soreness, recovery)
+- Anything you really enjoyed or want more of?
+- Anything that felt stale, painful, or you want to drop?
+
+**Round 2 — Goal progress and life context.** Ask:
+- Any movement on long-term goals — measurements, PRs, milestones, setbacks?
+- Anything shifted in life context (sleep, stress, travel, schedule, injuries) that should change how I program the next week or two?
+
+**Round 3 — Looking ahead (only if useful).** Skip if Rounds 1–2 already covered it. Ask:
+- Anything specific you want to focus on for the next ~week? (e.g. push zone 2 dose, hit a strength PR, prioritize mobility)
+- Any constraints coming up I should plan around?
+
+After their answers, briefly reflect back what you heard in 3–4 bullets ("Here's what I'm taking away…") and confirm before saving.
+
+### Save the check-in
+
+Two writes:
+
+1. **Append to `check-ins.md`** (in the storage directory, absolute path). If the file doesn't exist, create it with header `# Weekly check-ins\n\n_Newest first. Append new entries directly below this header._`. Use the entry format in [references/check-in-format.md](references/check-in-format.md).
+2. **Update `profile.md`** with anything that changed: new injuries, equipment, time realities, goal progress, preferences, life context. Bump `_Last updated:_`, set `last_check_in: YYYY-MM-DD` under `## Skill settings`, and add a one-line change log entry (e.g. "2026-04-25 — Weekly check-in; updated injuries and shifted typical session length to 60 min.").
+
+If nothing in the profile actually changed, still bump `last_check_in` and the change log ("Weekly check-in; no profile changes."). The date is what gates future suggestions.
+
+Then close the loop in one line ("Logged. Want today's workout now?") and route to whatever the user wanted.
 
 ## Update the profile
 
