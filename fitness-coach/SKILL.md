@@ -26,8 +26,10 @@ Files in the storage directory:
 
 **Bootstrap (do this with as few tool calls as possible — every Bash command may trigger a permission prompt):**
 
-1. Try `Read` on `~/.claude/fitness-coach/profile.md` directly. The Read tool returns a clean error if the file is missing — that's not a failure, it just means the user isn't onboarded yet. Do **not** run `ls`, `test -f`, or any Bash check first; it adds a permission prompt the user already paid for via the persistent allow rule on the default directory.
-2. If the Read succeeds → also Read `~/.claude/fitness-coach/workout-log.md` (same approach — just try it; missing is fine). Load the most recent ~10 sessions; if the file is large, use Read with an offset to grab the last 200 lines.
+Always use the **absolute path** (`/Users/<you>/.claude/fitness-coach/...`, resolved from `$HOME`) when calling Read/Write/Edit on these files. Claude Code's permission matcher matches the literal path string passed to the tool, so a `~`-prefixed call won't be covered by an absolute-path allow rule (and vice versa). Resolve once, then use the absolute path consistently.
+
+1. Try `Read` on `$HOME/.claude/fitness-coach/profile.md` (absolute path) directly. The Read tool returns a clean error if the file is missing — that's not a failure, it just means the user isn't onboarded yet. Do **not** run `ls`, `test -f`, or any Bash check first; it adds a permission prompt the user already paid for via the persistent allow rule on the default directory.
+2. If the Read succeeds → also Read `$HOME/.claude/fitness-coach/workout-log.md` (same approach — just try it; missing is fine). Load the most recent ~10 sessions; if the file is large, use Read with an offset to grab the last 200 lines.
 3. If the Read on `profile.md` returns "file does not exist", AND `$FITNESS_COACH_HOME` is set OR you have a specific reason to suspect `~/.fitness-coach/` is in use (e.g. the user mentioned it), only then fall back to a single Bash check. Otherwise treat it as first-use and run **Onboarding**.
 
 Once the profile is loaded:
@@ -97,7 +99,7 @@ Open-ended. Ask for any other relevant info:
 
 ### Save the profile
 
-After the interview, write `~/.claude/fitness-coach/profile.md` using the structure in [references/profile-template.md](references/profile-template.md). Then show the user the saved profile and ask "Anything to fix before we move on?" — apply edits before suggesting a workout.
+After the interview, Write `profile.md` to the storage directory using the structure in [references/profile-template.md](references/profile-template.md). Use the **absolute path** (`$HOME/.claude/fitness-coach/profile.md` resolved) so future Read/Write calls match the persistent allow rule. Then show the user the saved profile and ask "Anything to fix before we move on?" — apply edits before suggesting a workout.
 
 ### Offer to skip future permission prompts (Claude Code only)
 
@@ -174,7 +176,7 @@ Apply the user's requested changes, keeping the same output shape. Don't re-expl
 
 ## Log the session
 
-When the user reports back, append a new entry to the **top** of `~/.claude/fitness-coach/workout-log.md` (most recent first). Use the entry format in [references/log-format.md](references/log-format.md). Capture:
+When the user reports back, append a new entry to the **top** of `workout-log.md` in the storage directory (most recent first). Use the absolute path (`$HOME/.claude/fitness-coach/workout-log.md` resolved) when calling Edit/Write. Use the entry format in [references/log-format.md](references/log-format.md). Capture:
 
 - Date
 - What was actually done (modifications from the proposed workout, if any)
