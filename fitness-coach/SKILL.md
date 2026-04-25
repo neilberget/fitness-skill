@@ -9,12 +9,21 @@ Acts as the user's personal trainer. Maintains a long-lived profile (bio, goals,
 
 ## Files this skill owns
 
-All state lives outside the skill bundle, in the user's home directory:
+All state lives outside the skill bundle, in the user's home directory.
 
-- `~/.claude/fitness-coach/profile.md` — bio, goals, equipment, preferences. Long-lived. Edit in place when facts change.
-- `~/.claude/fitness-coach/workout-log.md` — append-only reverse-chronological log of completed sessions (most recent at top).
+**Storage location (in priority order):**
+1. `$FITNESS_COACH_HOME` if the env var is set
+2. `~/.fitness-coach/` if it exists
+3. `~/.claude/fitness-coach/` otherwise (and create it if missing)
 
-Create the directory if missing: `mkdir -p ~/.claude/fitness-coach`.
+This lets the same skill run cleanly under Claude Code, Codex CLI, or anything else without fighting over directory namespaces. Pick the path once at the start of the session and use it consistently.
+
+Files in that directory:
+
+- `profile.md` — bio, goals, equipment, preferences. Long-lived. Edit in place when facts change.
+- `workout-log.md` — append-only reverse-chronological log of completed sessions (most recent at top).
+
+Create the directory if missing: `mkdir -p <chosen-path>`.
 
 ## Workflow decision tree
 

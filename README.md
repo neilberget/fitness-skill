@@ -48,30 +48,64 @@ lower hasn't been hit in 4 days. VO2max goal still wants regular Z2 dose.
 
 ## Installation
 
-This skill works with Claude Code (CLI, desktop app, or IDE extensions).
+The skill is built as a Claude Code skill but works in OpenAI Codex CLI natively (same `SKILL.md` + `references/` format) and can be adapted for ChatGPT with caveats.
 
-### Option 1: Clone into your skills directory
+### Claude Code
+
+Clone into your user skills directory:
 
 ```bash
 mkdir -p ~/.claude/skills
-cd ~/.claude/skills
-git clone https://github.com/neilberget/fitness-skill.git
-mv fitness-skill/fitness-coach .
-rm -rf fitness-skill
+git clone https://github.com/neilberget/fitness-skill.git /tmp/fitness-skill
+mv /tmp/fitness-skill/fitness-coach ~/.claude/skills/
+rm -rf /tmp/fitness-skill
 ```
 
-### Option 2: Install from the packaged `.skill` file
-
-Download `fitness-coach.skill` from the [latest release](https://github.com/neilberget/fitness-skill/releases) (or from the repo root) and install it via Claude Code's skill installation flow:
+Or install the packaged `.skill` file directly:
 
 ```bash
 # In Claude Code:
 /skill install /path/to/fitness-coach.skill
 ```
 
-### Option 3: Use as a plugin
+State is saved to `~/.claude/fitness-coach/` by default.
 
-If you manage Claude skills via a plugin system, point it at this repo's `fitness-coach/` directory.
+### OpenAI Codex CLI
+
+Codex uses the same skill format (`SKILL.md` with YAML frontmatter, `references/` subdirectory) and loads skills from `~/.agents/skills/`:
+
+```bash
+mkdir -p ~/.agents/skills
+git clone https://github.com/neilberget/fitness-skill.git /tmp/fitness-skill
+mv /tmp/fitness-skill/fitness-coach ~/.agents/skills/
+rm -rf /tmp/fitness-skill
+```
+
+Set the storage path so it doesn't live under Claude's namespace:
+
+```bash
+export FITNESS_COACH_HOME="$HOME/.fitness-coach"
+```
+
+(Add that to your shell rc file to make it permanent.) The skill checks `$FITNESS_COACH_HOME` first, then falls back to `~/.fitness-coach/`, then `~/.claude/fitness-coach/`.
+
+If Codex's frontmatter validator complains about the SKILL.md, the [`claude-to-codex`](https://community.openai.com/t/claude-to-codex-bring-claude-skills-to-codex-automatically/1378574) community tool handles the rewrite automatically.
+
+### ChatGPT (Custom GPT) — works with caveats
+
+ChatGPT has no filesystem, so the workout log can't auto-persist. You can still use the skill's logic by creating a Custom GPT:
+
+1. Create a new Custom GPT (chatgpt.com → Explore GPTs → Create).
+2. Paste the contents of [`fitness-coach/SKILL.md`](fitness-coach/SKILL.md) (everything below the YAML frontmatter) into the **Instructions** field.
+3. Upload the three files in [`fitness-coach/references/`](fitness-coach/references/) as **Knowledge** files.
+4. Add this to the end of the Instructions: *"There is no filesystem in this environment. When the user asks to save the profile or log a workout, output the updated file contents in a code block and ask the user to copy it into their own `profile.md` / `workout-log.md`. When the user wants to load context, ask them to paste those files."*
+
+**What this gets you:** the same coaching logic and onboarding flow.
+**What it doesn't:** automatic profile/log persistence — you'll be copy-pasting markdown blocks each session. If you want true persistence, the ChatGPT Atlas desktop app with a filesystem MCP server can read/write local files; setup is involved but the skill itself works unchanged once the MCP layer is in place.
+
+### Other agents
+
+The same `SKILL.md` + `references/` structure works (sometimes with light frontmatter tweaks) in Cursor, Aider, Windsurf, Gemini CLI, and other tools that have adopted Anthropic's Skill format. Point them at the `fitness-coach/` directory.
 
 ## Verify it's installed
 
@@ -83,12 +117,18 @@ If installed, Claude will recognize it has no profile yet and start the onboardi
 
 ## What gets saved on your machine
 
-The skill writes only to `~/.claude/fitness-coach/`:
+The skill writes only two files to a single directory. Location is chosen in this order:
+
+1. `$FITNESS_COACH_HOME` if set
+2. `~/.fitness-coach/` if it exists
+3. `~/.claude/fitness-coach/` otherwise
+
+Files:
 
 - `profile.md` — your bio, goals, equipment, preferences. Edited in place when facts change.
 - `workout-log.md` — append-only, newest first. One entry per session.
 
-Both are plain markdown. You can edit them by hand any time. Nothing is sent anywhere except as part of your normal Claude conversations.
+Both are plain markdown. You can edit them by hand any time. Nothing is sent anywhere except as part of your normal agent conversations.
 
 ## Customization
 

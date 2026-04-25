@@ -1,6 +1,6 @@
 # Workout log format
 
-`~/.claude/fitness-coach/workout-log.md` is append-only and **reverse chronological** (newest entry directly under the `# Workout log` header). This lets future sessions read just the top of the file to get recent context.
+`workout-log.md` (in the storage directory chosen per SKILL.md) is append-only and **reverse chronological** (newest entry directly under the `# Workout log` header). This lets future sessions read just the top of the file to get recent context.
 
 ## File header (only on first creation)
 

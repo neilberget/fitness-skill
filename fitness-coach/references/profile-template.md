@@ -1,6 +1,6 @@
 # Profile template
 
-Use this exact structure when writing `~/.claude/fitness-coach/profile.md`. Fill every section from the onboarding interview. If the user didn't answer something, write `_not provided_` rather than omitting the section — it makes future updates easier.
+Use this exact structure when writing `profile.md` (in the storage directory chosen per SKILL.md). Fill every section from the onboarding interview. If the user didn't answer something, write `_not provided_` rather than omitting the section — it makes future updates easier.
 
 ```markdown
 # Fitness profile — [Name]
