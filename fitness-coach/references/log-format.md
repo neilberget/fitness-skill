@@ -48,7 +48,7 @@ If the user reports pain or a new limitation, ALSO update `profile.md` injuries 
 
 ## Reading the log for context
 
-When designing a new workout, read the top ~10 entries (or last 200 lines, whichever is shorter). Look for:
+When designing a new workout, read the top ~10 entries (or first ~200 lines after the header, whichever is shorter). The log is newest-first, so do not read from the end of a large file for recent context. Look for:
 
 - **Movement balance** — what muscle groups / patterns have been hit recently?
 - **Cardio dose** — how much zone 2 vs intervals vs none in the last 7–10 days?

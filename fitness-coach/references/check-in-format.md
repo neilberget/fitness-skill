@@ -28,7 +28,7 @@ _Newest first. Append new entries directly below this header._
 - ...
 
 ### Plan for next ~week
-- [What you and the user agreed to focus on or adjust]
+- [Loose weekly compass by default: current bias, broad weekly targets, next good options, and avoid-for-now constraints. If the user asked for a fixed plan, include the exact schedule and fallback rules.]
 
 ### Profile changes made
 - [One bullet per profile edit, or "none"]

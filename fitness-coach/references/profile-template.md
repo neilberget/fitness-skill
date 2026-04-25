@@ -26,6 +26,13 @@ _Last updated: YYYY-MM-DD_
 - ...
 - ...
 
+### Medical / safety notes
+- **Clinician restrictions:** ...
+- **Cardiovascular/metabolic considerations:** ...
+- **Medications affecting HR or exercise tolerance:** ...
+- **Pregnancy/postpartum considerations:** ...
+- **Red flags reported:** ...
+
 ## Long-term goals
 [Verbatim from user — preserve their bullet structure, baselines, and dates.]
 
@@ -50,9 +57,17 @@ _Last updated: YYYY-MM-DD_
 - **Time realities:** ...
 - **Other:** ...
 
+## Flexible weekly compass
+- **Mode:** loose  <!-- "loose" by default; use "fixed plan" only if the user asks for exact weekly scheduling -->
+- **Current bias:** ...
+- **Weekly targets:** ...
+- **Next good options:** ...
+- **Avoid for now:** ...
+
 ## Skill settings
 - **youtube_links:** on  <!-- set to "off" if user asks to stop linking exercise names to YouTube searches -->
 - **permission_offer:** unprompted  <!-- "accepted" once persistent allow rules are added, "declined" if user said no, "unprompted" otherwise -->
+- **profile_created:** YYYY-MM-DD
 - **last_check_in:** _none_  <!-- YYYY-MM-DD of last completed weekly check-in; "_none_" until the first one runs -->
 
 ## Change log
@@ -64,6 +79,12 @@ _Last updated: YYYY-MM-DD_
 If max HR was provided (or estimated from 220 - age), pre-compute the zone ranges in the table above. Round to whole bpm. The user shouldn't have to do the math themselves to use a workout.
 
 If the user later provides a measured max HR, update the bio line AND the zones AND add a change log entry.
+
+## Safety rules
+
+If the user reports chest pain, fainting, severe or unusual shortness of breath, acute injury, neurological symptoms, uncontrolled dizziness, or worsening pain, do not prescribe a workout. Recommend stopping training for now and seeking appropriate medical care or clinician guidance.
+
+Do not diagnose medical issues, prescribe rehab for unresolved injuries, or override clinician restrictions. For non-emergency limitations, work around them and update the profile if they should persist beyond today.
 
 ## Updating the profile
 

@@ -5,11 +5,13 @@ A [Claude Code](https://claude.com/claude-code) skill that turns Claude into you
 ## What it does
 
 - **One-time onboarding.** First time you ask for a workout, Claude interviews you in 5 short rounds: bio, long-term goals, preferences, equipment & location, and current life context.
-- **Persistent profile.** Saves everything to `~/.claude/fitness-coach/profile.md`, including derived heart-rate zones.
+- **Persistent profile.** Saves your goals, equipment, preferences, safety notes, flexible weekly targets, and derived heart-rate zones.
 - **Tailored workouts on demand.** Ask "give me a workout" any time and Claude designs a session that fits your goals, available time today, current equipment, recovery state, and what you've done recently.
+- **Safety boundaries.** Captures injuries, clinician restrictions, and red flags during onboarding, then avoids prescribing workouts when medical guidance is the right next step.
 - **Modifications mid-conversation.** "Make it 30 minutes." "Swap out the deadlifts." "No jumping today." It adjusts.
-- **Workout log.** Report back how it went and Claude appends a structured entry to `~/.claude/fitness-coach/workout-log.md` (newest first). Future sessions read recent entries to inform programming.
-- **Weekly check-in.** After ~a week of training (7+ days, 3+ sessions), Claude offers a 5-minute retrospective interview — what worked, what to drop, goal progress, life context shifts — then updates your profile and logs the check-in to `check-ins.md`. The suggestion is always optional; if you just want today's workout, say so and it skips.
+- **Workout log.** Report back how it went and Claude appends a structured entry to `workout-log.md` in the chosen storage directory (newest first). Future sessions read recent entries to inform programming.
+- **Flexible weekly compass.** Instead of forcing a rigid schedule, it keeps broad weekly targets and "next good options" so training still works around busy weeks. If you want exact day-by-day planning, it can do that too.
+- **Weekly check-in.** After ~a week of training (7+ days, 3+ sessions), Claude offers a 5-minute retrospective interview — what worked, what to drop, goal progress, life context shifts — then updates your profile, flexible weekly compass, and `check-ins.md`. The suggestion is always optional; if you just want today's workout, say so and it skips.
 - **Profile updates.** Tell it about a new injury, new equipment, or a goal change and it edits the profile in place.
 
 Every workout includes specific loads, rep schemes, time blocks, and BPM ranges — no "moderate weight, a few rounds" hand-waving.
@@ -69,7 +71,7 @@ Or install the packaged `.skill` file directly:
 /skill install /path/to/fitness-coach.skill
 ```
 
-State is saved to `~/.claude/fitness-coach/` by default.
+State is saved to `~/.claude/fitness-coach/` by default in Claude Code, unless `$FITNESS_COACH_HOME` is set or `~/.fitness-coach/` already exists.
 
 ### OpenAI Codex CLI
 
@@ -88,7 +90,7 @@ Set the storage path so it doesn't live under Claude's namespace:
 export FITNESS_COACH_HOME="$HOME/.fitness-coach"
 ```
 
-(Add that to your shell rc file to make it permanent.) The skill checks `$FITNESS_COACH_HOME` first, then falls back to `~/.fitness-coach/`, then `~/.claude/fitness-coach/`.
+(Add that to your shell rc file to make it permanent.) The skill checks `$FITNESS_COACH_HOME` first, then `~/.fitness-coach/` if it already exists, then `~/.claude/fitness-coach/` in Claude Code or `~/.fitness-coach/` elsewhere.
 
 If Codex's frontmatter validator complains about the SKILL.md, the [`claude-to-codex`](https://community.openai.com/t/claude-to-codex-bring-claude-skills-to-codex-automatically/1378574) community tool handles the rewrite automatically.
 
@@ -98,7 +100,7 @@ ChatGPT has no filesystem, so the workout log can't auto-persist. You can still 
 
 1. Create a new Custom GPT (chatgpt.com → Explore GPTs → Create).
 2. Paste the contents of [`fitness-coach/SKILL.md`](fitness-coach/SKILL.md) (everything below the YAML frontmatter) into the **Instructions** field.
-3. Upload the three files in [`fitness-coach/references/`](fitness-coach/references/) as **Knowledge** files.
+3. Upload the four files in [`fitness-coach/references/`](fitness-coach/references/) as **Knowledge** files.
 4. Add this to the end of the Instructions: *"There is no filesystem in this environment. When the user asks to save the profile or log a workout, output the updated file contents in a code block and ask the user to copy it into their own `profile.md` / `workout-log.md`. When the user wants to load context, ask them to paste those files."*
 
 **What this gets you:** the same coaching logic and onboarding flow.
@@ -121,8 +123,9 @@ If installed, Claude will recognize it has no profile yet and start the onboardi
 The skill writes only a small set of files to a single directory. Location is chosen in this order:
 
 1. `$FITNESS_COACH_HOME` if set
-2. `~/.fitness-coach/` if it exists
-3. `~/.claude/fitness-coach/` otherwise
+2. `~/.fitness-coach/` if it already exists
+3. `~/.claude/fitness-coach/` when running under Claude Code
+4. `~/.fitness-coach/` otherwise
 
 Files:
 

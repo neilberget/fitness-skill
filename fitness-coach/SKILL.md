@@ -5,17 +5,20 @@ description: Personal fitness coach that designs workouts tailored to the user's
 
 # Fitness Coach
 
-Acts as the user's personal trainer. Maintains a long-lived profile (bio, goals, equipment, preferences) and an append-only workout log under `~/.claude/fitness-coach/`. Uses both to design workouts that fit the user's history, recovery state, and goals.
+Acts as the user's personal trainer. Maintains a long-lived profile (bio, goals, equipment, preferences, safety notes, flexible programming targets) and an append-only workout log in the storage directory chosen below. Uses both to design workouts that fit the user's history, recovery state, goals, and real-life constraints.
 
 ## Files this skill owns
 
 All state lives outside the skill bundle, in the user's home directory.
 
-**Default storage location:** `~/.claude/fitness-coach/`. This is what the persistent permission rules cover, so prefer it over the alternatives unless the user has explicitly chosen another.
+**Storage directory resolution:**
 
-**Overrides** (only check these if the default is empty AND you have reason to think the user uses one):
-- `$FITNESS_COACH_HOME` if set in the environment
-- `~/.fitness-coach/` if it exists from a prior install
+Choose exactly one storage directory at the start of the session, resolve it to an absolute path, and use that same absolute path for every read/write/edit.
+
+1. `$FITNESS_COACH_HOME`, if set.
+2. `~/.fitness-coach/`, if it already exists from a prior install.
+3. `~/.claude/fitness-coach/`, when running under Claude Code.
+4. `~/.fitness-coach/`, in all other environments.
 
 Files in the storage directory:
 
@@ -25,17 +28,18 @@ Files in the storage directory:
 
 ## Workflow decision tree
 
-**Bootstrap (do this with as few tool calls as possible — every Bash command may trigger a permission prompt):**
+**Bootstrap (do this with as few tool calls as possible — shell commands may trigger permission prompts in some environments):**
 
-Always use the **absolute path** (`/Users/<you>/.claude/fitness-coach/...`, resolved from `$HOME`) when calling Read/Write/Edit on these files. Claude Code's permission matcher matches the literal path string passed to the tool, so a `~`-prefixed call won't be covered by an absolute-path allow rule (and vice versa). Resolve once, then use the absolute path consistently.
+Always use the **absolute path** when calling file tools on these files. Claude Code's permission matcher matches the literal path string passed to the tool, so a `~`-prefixed call won't be covered by an absolute-path allow rule (and vice versa). Resolve once, then use the absolute path consistently.
 
-1. Try `Read` on `$HOME/.claude/fitness-coach/profile.md` (absolute path) directly. The Read tool returns a clean error if the file is missing — that's not a failure, it just means the user isn't onboarded yet. Do **not** run `ls`, `test -f`, or any Bash check first; it adds a permission prompt the user already paid for via the persistent allow rule on the default directory.
-2. If the Read succeeds → also Read `$HOME/.claude/fitness-coach/workout-log.md` (same approach — just try it; missing is fine). Load the most recent ~10 sessions; if the file is large, use Read with an offset to grab the last 200 lines.
-3. If the Read on `profile.md` returns "file does not exist", AND `$FITNESS_COACH_HOME` is set OR you have a specific reason to suspect `~/.fitness-coach/` is in use (e.g. the user mentioned it), only then fall back to a single Bash check. Otherwise treat it as first-use and run **Onboarding**.
+1. Resolve the storage directory using the order above. If checking whether `~/.fitness-coach/` exists would require a shell prompt and there is no reason to suspect it exists, skip that check and use the environment-appropriate default.
+2. Try to read `profile.md` from the resolved storage directory directly. A missing file is not a failure; it just means the user is not onboarded yet.
+3. If the read succeeds, also read `workout-log.md` from the same directory. Missing is fine. Load the most recent ~10 sessions; because the log is newest-first, read from the top of the file. If the file is large, read the first ~200 lines after the header rather than the end of the file.
+4. If the profile is missing, run **Onboarding**.
 
 Once the profile is loaded:
 
-- If `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
+- If running under Claude Code and `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
 - Check whether a weekly check-in is due (see [Weekly check-in](#weekly-check-in)). If so, surface a one-line suggestion at the **start** of your response — don't block the user's actual request.
 
 **Then route by what the user asked for:**
@@ -54,7 +58,7 @@ Goal: produce `profile.md` from a short interview. Do **not** dump all questions
 
 Before starting, say briefly: "I'll ask a few questions to build your fitness profile. This is a one-time setup — after this, I'll just suggest workouts."
 
-### Round 1 — Bio
+### Round 1 — Bio and safety
 Ask for, in one message:
 - Name (if you already know it from context, confirm rather than re-ask)
 - Age
@@ -63,6 +67,7 @@ Ask for, in one message:
 - Weight
 - General fitness level (sedentary / recreationally active / regularly trains / competitive athlete — or their own words)
 - Injuries, surgeries, or movement limitations to work around
+- Any clinician restrictions or medical considerations that should affect training (e.g. cardiovascular/metabolic conditions, blood-pressure issues, pregnancy/postpartum, medications that affect heart rate, dizziness/fainting history, chest pain with exertion)
 - Estimated max heart rate, if known (otherwise note "use 220 - age as default")
 
 ### Round 2 — Long-term goals
@@ -102,7 +107,7 @@ Open-ended. Ask for any other relevant info:
 
 ### Save the profile
 
-After the interview, Write `profile.md` to the storage directory using the structure in [references/profile-template.md](references/profile-template.md). Use the **absolute path** (`$HOME/.claude/fitness-coach/profile.md` resolved) so future Read/Write calls match the persistent allow rule. Then show the user the saved profile and ask "Anything to fix before we move on?" — apply edits before suggesting a workout.
+After the interview, Write `profile.md` to the storage directory using the structure in [references/profile-template.md](references/profile-template.md). Set `profile_created` to today's date and initialize `## Flexible weekly compass` from the user's goals, preferences, equipment, and time realities. Use the **absolute path** resolved during bootstrap so future Read/Write calls match any persistent allow rule. Then show the user the saved profile and ask "Anything to fix before we move on?" — apply edits before suggesting a workout.
 
 ### Offer to skip future permission prompts (Claude Code only)
 
@@ -137,10 +142,13 @@ Ask one targeted question if needed (skip if obvious from context):
 - How are you feeling / any soreness or sleep issues?
 - Any constraint today (location change, equipment unavailable)?
 
+Before designing, check the user's safety notes. If they report chest pain, fainting, severe or unusual shortness of breath, acute injury, neurological symptoms, uncontrolled dizziness, or worsening pain, do **not** prescribe a workout. Tell them to stop training for now and seek appropriate medical care or clinician guidance. If they report a new limitation that is not an emergency, work around it and update the profile if it should persist beyond today.
+
 Then design the session. Use the heuristics in [references/programming-principles.md](references/programming-principles.md) — read it before designing if you haven't this session. Key things to weight:
 
 - **Goals**: what energy systems / capacities does the user need to push? Tilt toward whatever the long-term goals demand.
-- **Recent log**: don't repeat heavy lower-body two days in a row. Rotate movement patterns. If the last few sessions skewed one way, balance it.
+- **Flexible weekly compass**: use the profile's current weekly targets and next-session priorities as a guide, not a rigid schedule. Help the user make the next good training choice based on what they can do today.
+- **Recent log**: don't repeat heavy lower-body two days in a row. Rotate movement patterns. If the last few sessions skewed one way, balance it against the weekly compass.
 - **Recovery signals**: high RPE / poor sleep / soreness reported recently → bias toward zone 2, mobility, or technique work.
 - **Equipment & location** today.
 - **Time available** today.
@@ -167,9 +175,9 @@ Output the workout in this shape (concise — no fluff):
 **Notes:** [form cues, alternatives if something feels off]
 ```
 
-**Exercise name links (default on):** By default, wrap every exercise name in a YouTube search link so the user can click through if they don't recognize the movement. Format: `[Exercise name](https://www.youtube.com/results?search_query=Exercise+name+form)` — URL-encode spaces as `+` and append `+form` to bias results toward demonstrations. Apply this in warm-up, main work, and finisher sections. Skip it for plain rest/recovery items (e.g. "rest 90s") and section labels.
+**Exercise name links (default on):** By default, wrap every exercise name in a YouTube search link so the user can click through if they don't recognize the movement. In clients like Claude where Markdown links render cleanly, this appears as just the exercise name in link styling. Format: `[Exercise name](https://www.youtube.com/results?search_query=Exercise+name+form)` — URL-encode spaces as `+` and append `+form` to bias results toward demonstrations. Apply this in warm-up, main work, and finisher sections. Skip it for plain rest/recovery items (e.g. "rest 90s") and section labels.
 
-If the user asks to turn the links off ("stop linking exercises", "no YouTube links", etc.), record it in `profile.md` under `## Skill settings` as `youtube_links: off` and stop adding links in this and future sessions. If they later ask to turn it back on, set it to `on`. Always check the profile for this setting before generating a workout — default to on if missing.
+If the user asks to turn the links off ("stop linking exercises", "no YouTube links", "links render badly here", etc.), record it in `profile.md` under `## Skill settings` as `youtube_links: off` and stop adding links in this and future sessions. If they later ask to turn it back on, set it to `on`. Always check the profile for this setting before generating a workout — default to on if missing.
 
 Then ask: "Want any modifications, or ready to go?"
 
@@ -179,7 +187,7 @@ Apply the user's requested changes, keeping the same output shape. Don't re-expl
 
 ## Log the session
 
-When the user reports back, append a new entry to the **top** of `workout-log.md` in the storage directory (most recent first). Use the absolute path (`$HOME/.claude/fitness-coach/workout-log.md` resolved) when calling Edit/Write. Use the entry format in [references/log-format.md](references/log-format.md). Capture:
+When the user reports back, append a new entry to the **top** of `workout-log.md` in the storage directory (most recent first). Use the resolved absolute path from bootstrap when calling Edit/Write. Use the entry format in [references/log-format.md](references/log-format.md). Capture:
 
 - Date
 - What was actually done (modifications from the proposed workout, if any)
@@ -199,7 +207,7 @@ Roughly once a week, step back and interview the user for feedback so the progra
 
 Compute "due" at the start of any session, after loading the profile and log:
 
-- **Days elapsed:** today minus `last_check_in` in `## Skill settings`. If the field is missing, treat the date of the first entry in `workout-log.md` as the baseline; if the log is also empty, not due.
+- **Days elapsed:** today minus `last_check_in` in `## Skill settings`. If `last_check_in` is missing or `_none_`, use `profile_created` from `## Skill settings` as the baseline. If that is also missing, use the oldest logged session date. If the log is empty, not due.
 - **Sessions logged since last check-in:** count entries in `workout-log.md` newer than `last_check_in`.
 
 Due when **days ≥ 7 AND sessions ≥ 3**. Soft-overdue (worth a slightly stronger nudge) when days ≥ 10 or sessions ≥ 6. If the user just onboarded, don't surface this until they have at least 3 logged sessions.
@@ -232,8 +240,9 @@ Read the recent ~10 log entries first so questions are grounded in what they act
 - Anything shifted in life context (sleep, stress, travel, schedule, injuries) that should change how I program the next week or two?
 
 **Round 3 — Looking ahead (only if useful).** Skip if Rounds 1–2 already covered it. Ask:
-- Anything specific you want to focus on for the next ~week? (e.g. push zone 2 dose, hit a strength PR, prioritize mobility)
+- Anything specific you want to bias toward for the next ~week? (e.g. more zone 2, maintain strength, prioritize mobility)
 - Any constraints coming up I should plan around?
+- Whether they want a loose weekly compass or a specific weekly plan. Default to a loose weekly compass for busy-life flexibility.
 
 After their answers, briefly reflect back what you heard in 3–4 bullets ("Here's what I'm taking away…") and confirm before saving.
 
@@ -242,7 +251,7 @@ After their answers, briefly reflect back what you heard in 3–4 bullets ("Here
 Two writes:
 
 1. **Append to `check-ins.md`** (in the storage directory, absolute path). If the file doesn't exist, create it with header `# Weekly check-ins\n\n_Newest first. Append new entries directly below this header._`. Use the entry format in [references/check-in-format.md](references/check-in-format.md).
-2. **Update `profile.md`** with anything that changed: new injuries, equipment, time realities, goal progress, preferences, life context. Bump `_Last updated:_`, set `last_check_in: YYYY-MM-DD` under `## Skill settings`, and add a one-line change log entry (e.g. "2026-04-25 — Weekly check-in; updated injuries and shifted typical session length to 60 min.").
+2. **Update `profile.md`** with anything that changed: new injuries, equipment, time realities, goal progress, preferences, life context, and the flexible weekly compass. Bump `_Last updated:_`, set `last_check_in: YYYY-MM-DD` under `## Skill settings`, and add a one-line change log entry (e.g. "2026-04-25 — Weekly check-in; updated injuries and shifted typical session length to 60 min.").
 
 If nothing in the profile actually changed, still bump `last_check_in` and the change log ("Weekly check-in; no profile changes."). The date is what gates future suggestions.
 
@@ -252,6 +261,20 @@ Then close the loop in one line ("Logged. Want today's workout now?") and route 
 
 When the user shares info that changes the profile (new injury, lost/gained equipment, shifted goals, changed weight, hit a goal), edit `profile.md` in place. Keep the structure intact. Confirm what you changed in one sentence. Don't rewrite sections that didn't change.
 
+## Flexible weekly compass
+
+This skill should work for people with busy lives. Do not assume the user can follow a fixed Monday/Wednesday/Friday plan unless they ask for one.
+
+Maintain a lightweight `## Flexible weekly compass` section in `profile.md`:
+
+- **Mode:** `loose` by default; `fixed plan` only if the user asks for exact weekly scheduling.
+- **Current bias:** the main training emphasis for the next 1–2 weeks.
+- **Weekly targets:** broad dose targets, such as "2 strength exposures, 2 aerobic exposures, 2 short mobility doses." These are targets, not obligations.
+- **Next good options:** 2–4 session types that would be useful next depending on time, equipment, and recovery.
+- **Avoid for now:** temporary constraints from recovery, pain, travel, or stale movements.
+
+When designing a workout, choose the best next option from the compass and recent log. If the user missed several days, do not "make up" missed workouts; resume with the next highest-value session. If they ask for a strict plan, provide one, but include fallback rules for missed days.
+
 ## Conventions
 
 - Use the user's name once at the start of a session, not in every message.
@@ -259,3 +282,4 @@ When the user shares info that changes the profile (new injury, lost/gained equi
 - Be specific with loads, reps, times, distances. Avoid "moderate weight" or "a few rounds."
 - When suggesting HR zones, use the user's stored max HR (or 220 - age) and give the actual BPM range, not just "Zone 2."
 - Never invent log entries. Only log what the user reports.
+- Do not diagnose medical issues, prescribe rehab for unresolved injuries, or override clinician guidance.
