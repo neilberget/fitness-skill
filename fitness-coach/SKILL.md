@@ -11,33 +11,35 @@ Acts as the user's personal trainer. Maintains a long-lived profile (bio, goals,
 
 All state lives outside the skill bundle, in the user's home directory.
 
-**Storage location (in priority order):**
-1. `$FITNESS_COACH_HOME` if the env var is set
-2. `~/.fitness-coach/` if it exists
-3. `~/.claude/fitness-coach/` otherwise (and create it if missing)
+**Default storage location:** `~/.claude/fitness-coach/`. This is what the persistent permission rules cover, so prefer it over the alternatives unless the user has explicitly chosen another.
 
-This lets the same skill run cleanly under Claude Code, Codex CLI, or anything else without fighting over directory namespaces. Pick the path once at the start of the session and use it consistently.
+**Overrides** (only check these if the default is empty AND you have reason to think the user uses one):
+- `$FITNESS_COACH_HOME` if set in the environment
+- `~/.fitness-coach/` if it exists from a prior install
 
-Files in that directory:
+Files in the storage directory:
 
 - `profile.md` — bio, goals, equipment, preferences. Long-lived. Edit in place when facts change.
 - `workout-log.md` — append-only reverse-chronological log of completed sessions (most recent at top).
 
-Create the directory if missing: `mkdir -p <chosen-path>`.
-
 ## Workflow decision tree
 
-Read files first, then branch:
+**Bootstrap (do this with as few tool calls as possible — every Bash command may trigger a permission prompt):**
 
-1. Check whether `~/.claude/fitness-coach/profile.md` exists.
-   - **Missing or empty** → run **Onboarding** (below). Do not skip.
-   - **Exists** → read it. Also read `workout-log.md` if it exists (load the most recent ~10 sessions; if the file is large, read the last 200 lines). If `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
+1. Try `Read` on `~/.claude/fitness-coach/profile.md` directly. The Read tool returns a clean error if the file is missing — that's not a failure, it just means the user isn't onboarded yet. Do **not** run `ls`, `test -f`, or any Bash check first; it adds a permission prompt the user already paid for via the persistent allow rule on the default directory.
+2. If the Read succeeds → also Read `~/.claude/fitness-coach/workout-log.md` (same approach — just try it; missing is fine). Load the most recent ~10 sessions; if the file is large, use Read with an offset to grab the last 200 lines.
+3. If the Read on `profile.md` returns "file does not exist", AND `$FITNESS_COACH_HOME` is set OR you have a specific reason to suspect `~/.fitness-coach/` is in use (e.g. the user mentioned it), only then fall back to a single Bash check. Otherwise treat it as first-use and run **Onboarding**.
 
-2. Then route by what the user asked for:
-   - "Suggest a workout" / "what should I do today" / "give me an idea" → **Design a workout**
-   - "Make it shorter" / "swap X" / "no jumping today" → **Modify the proposed workout**
-   - "Here's how it went" / "I did X" / "log this" → **Log the session**
-   - "Update my profile" / new injury / new equipment / goal change → **Update the profile**
+Once the profile is loaded:
+
+- If `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
+
+**Then route by what the user asked for:**
+
+- "Suggest a workout" / "what should I do today" / "give me an idea" → **Design a workout**
+- "Make it shorter" / "swap X" / "no jumping today" → **Modify the proposed workout**
+- "Here's how it went" / "I did X" / "log this" → **Log the session**
+- "Update my profile" / new injury / new equipment / goal change → **Update the profile**
 
 If the user's intent is ambiguous (e.g. "let's train"), default to Design a workout but confirm time available and any constraints today before locking the plan.
 
