@@ -39,6 +39,7 @@ Always use the **absolute path** when calling file tools on these files. Claude 
 
 Once the profile is loaded:
 
+- Establish the date anchor for this session (see [Date anchoring and relative-date reasoning](#date-anchoring-and-relative-date-reasoning)) before interpreting "today," "yesterday," weekdays, "last X days," recovery timing, weekly check-in cadence, or recent-log spacing.
 - If running under Claude Code and `Skill settings → permission_offer` is `unprompted`, briefly offer the persistent allow rule (see [Offer to skip future permission prompts](#offer-to-skip-future-permission-prompts-claude-code-only)) at the end of your response, then update the setting to `accepted` or `declined` based on the answer. Don't re-ask once it's `declined`.
 - Check whether a weekly check-in is due (see [Weekly check-in](#weekly-check-in)). If so, surface a one-line suggestion at the **start** of your response — don't block the user's actual request.
 
@@ -51,6 +52,21 @@ Once the profile is loaded:
 - "Let's check in" / "do the weekly review" / "yeah let's review" → **Weekly check-in**
 
 If the user's intent is ambiguous (e.g. "let's train"), default to Design a workout but confirm time available and any constraints today before locking the plan.
+
+## Date anchoring and relative-date reasoning
+
+At the start of every session, before interpreting the workout log or any relative dates, anchor the calendar:
+
+- Use the environment/system current date when available. Treat it as authoritative for "today." If the environment also provides timezone or weekday, use it; otherwise derive the weekday from the ISO date.
+- If no current date is available in the environment or system context, ask one short question: "What is today's date?" Do not guess from the conversation.
+- Convert every recent log entry's ISO date (`YYYY-MM-DD`) into:
+  - weekday,
+  - calendar distance from today (0 days ago, 1 day ago, 2 days ago, etc.),
+  - training sequence relative to today (e.g. "Friday hard circuit → Saturday easy run → Sunday today").
+- Treat the ISO date as the source of truth. If an entry title or note says a weekday that conflicts with the ISO date, explicitly flag it and reason from the ISO date unless the user confirms the date itself is wrong.
+- When the user says "today," "yesterday," "Friday," "this weekend," or similar, map it to an exact date before making training decisions if it affects recovery, check-in cadence, or logging.
+- When explaining recovery from recent workouts, prefer exact phrasing such as "the hard circuit was 2 days ago on Friday, 2026-04-24" over loose phrasing like "a couple days ago."
+- If the user corrects a date or weekday, immediately re-anchor with the corrected exact dates and restate the recent sequence before updating the recommendation.
 
 ## Onboarding (first use only)
 

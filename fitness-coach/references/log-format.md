@@ -50,6 +50,7 @@ If the user reports pain or a new limitation, ALSO update `profile.md` injuries 
 
 When designing a new workout, read the top ~10 entries (or first ~200 lines after the header, whichever is shorter). The log is newest-first, so do not read from the end of a large file for recent context. Look for:
 
+- **Date spacing** — anchor "today" from the environment/system current date, then convert each recent `YYYY-MM-DD` entry into weekday + days ago. ISO dates are authoritative; if a title/note's weekday conflicts with the ISO date, flag the mismatch and reason from the ISO date unless the user corrects it.
 - **Movement balance** — what muscle groups / patterns have been hit recently?
 - **Cardio dose** — how much zone 2 vs intervals vs none in the last 7–10 days?
 - **Progression** — are loads going up on the main lifts? If stuck, plan to deload or vary.
