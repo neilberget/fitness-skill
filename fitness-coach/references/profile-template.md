@@ -67,6 +67,9 @@ _Last updated: YYYY-MM-DD_
 ## Skill settings
 - **youtube_links:** on  <!-- set to "off" if user asks to stop linking exercise names to YouTube searches -->
 - **permission_offer:** unprompted  <!-- "accepted" once persistent allow rules are added, "declined" if user said no, "unprompted" otherwise -->
+- **daily_check_in:** off  <!-- off | morning_ping | accountability — only set non-off when scheduling capability exists -->
+- **daily_check_in_time:** _none_  <!-- HH:MM local, e.g. "06:27"; "_none_" if daily_check_in is off -->
+- **daily_check_in_id:** _none_  <!-- schedule ID returned by the scheduling primitive (CronCreate, OpenClaw, etc.); "_none_" if off -->
 - **profile_created:** YYYY-MM-DD
 - **last_check_in:** _none_  <!-- YYYY-MM-DD of last completed weekly check-in; "_none_" until the first one runs -->
 
