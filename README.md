@@ -100,7 +100,7 @@ ChatGPT has no filesystem, so the workout log can't auto-persist. You can still 
 
 1. Create a new Custom GPT (chatgpt.com → Explore GPTs → Create).
 2. Paste the contents of [`fitness-coach/SKILL.md`](fitness-coach/SKILL.md) (everything below the YAML frontmatter) into the **Instructions** field.
-3. Upload the four files in [`fitness-coach/references/`](fitness-coach/references/) as **Knowledge** files.
+3. Upload the five files in [`fitness-coach/references/`](fitness-coach/references/) as **Knowledge** files.
 4. Add this to the end of the Instructions: *"There is no filesystem in this environment. When the user asks to save the profile or log a workout, output the updated file contents in a code block and ask the user to copy it into their own `profile.md` / `workout-log.md`. When the user wants to load context, ask them to paste those files."*
 
 **What this gets you:** the same coaching logic and onboarding flow.
@@ -139,6 +139,7 @@ Both are plain markdown. You can edit them by hand any time. Nothing is sent any
 
 The skill's behavior is defined in `fitness-coach/SKILL.md` and the files under `fitness-coach/references/`:
 
+- `references/onboarding.md` — the first-use interview flow (loaded only when no profile exists yet)
 - `references/profile-template.md` — structure of the saved profile
 - `references/log-format.md` — structure of workout log entries
 - `references/check-in-format.md` — structure of weekly check-in entries
@@ -152,6 +153,7 @@ Edit these to taste. If you change the programming principles, Claude's workout 
 fitness-coach/
 ├── SKILL.md                    # Skill entry point: workflow + decision tree
 └── references/
+    ├── onboarding.md           # First-use interview flow
     ├── profile-template.md     # Saved-profile structure
     ├── log-format.md           # Workout log entry format
     ├── check-in-format.md      # Weekly check-in entry format
